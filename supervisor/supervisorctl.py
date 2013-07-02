@@ -625,19 +625,19 @@ class DefaultControllerPlugin(ControllerPluginBase):
         code = result['status']
         template = '%s: ERROR (%s)'
         if code == xmlrpc.Faults.BAD_NAME:
-            return template % (name, 'no such process')
+            return template % (name, 'no such process'), code
         elif code == xmlrpc.Faults.NO_FILE:
-            return template % (name, 'no such file')
+            return template % (name, 'no such file'), code
         elif code == xmlrpc.Faults.NOT_EXECUTABLE:
-            return template % (name, 'file is not executable')
+            return template % (name, 'file is not executable'), code
         elif code == xmlrpc.Faults.ALREADY_STARTED:
-            return template % (name, 'already started')
+            return template % (name, 'already started'), code
         elif code == xmlrpc.Faults.SPAWN_ERROR:
-            return template % (name, 'spawn error')
+            return template % (name, 'spawn error'), code
         elif code == xmlrpc.Faults.ABNORMAL_TERMINATION:
-            return template % (name, 'abnormal termination')
+            return template % (name, 'abnormal termination'), code
         elif code == xmlrpc.Faults.SUCCESS:
-            return '%s: started' % name
+            return '%s: started' % (name), 0
         # assertion
         raise ValueError('Unknown result code %s for %s' % (code, name))
 
@@ -656,7 +656,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         if 'all' in names:
             results = supervisor.startAllProcesses()
             for result in results:
-                result = self._startresult(result)
+                result, code = self._startresult(result)
                 self.ctl.output(result)
                 
         else:
@@ -665,18 +665,19 @@ class DefaultControllerPlugin(ControllerPluginBase):
                 if process_name is None:
                     results = supervisor.startProcessGroup(group_name)
                     for result in results:
-                        result = self._startresult(result)
+                        result, code = self._startresult(result)
                         self.ctl.output(result)
                 else:
                     try:
                         result = supervisor.startProcess(name)
                     except xmlrpclib.Fault, e:
-                        error = self._startresult({'status':e.faultCode,
+                        error, code = self._startresult({'status':e.faultCode,
                                                    'name':name,
                                                    'description':e.faultString})
                         self.ctl.output(error)
                     else:
                         self.ctl.output('%s: started' % name)
+        return code
 
     def help_start(self):
         self.ctl.output("start <name>\t\tStart a process")
@@ -1113,7 +1114,8 @@ def main(args=None, options=None):
     options.realize(args, doc=__doc__)
     c = Controller(options)
     if options.args:
-        c.onecmd(" ".join(options.args))
+        code = c.onecmd(" ".join(options.args))
+        sys.exit(code)
     if options.interactive:
         try:
             import readline
