@@ -645,6 +645,7 @@ class DefaultControllerPlugin(ControllerPluginBase):
         if not self.ctl.upcheck():
             return
 
+        code = None
         names = arg.strip().split()
         supervisor = self.ctl.get_supervisor()
 
